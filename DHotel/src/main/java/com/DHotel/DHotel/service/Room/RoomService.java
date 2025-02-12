@@ -8,16 +8,25 @@ import com.DHotel.DHotel.repository.BookingRepository;
 import com.DHotel.DHotel.repository.RoomRepository;
 import com.DHotel.DHotel.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class RoomService implements IRoomService {
+
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
     @Autowired
     private RoomRepository roomRepository;
     @Autowired
@@ -32,6 +41,20 @@ public class RoomService implements IRoomService {
             room.setRoomType(roomType);
             room.setRoomPrice(roomPrice);
             room.setRoomDescription(description);
+
+            if(photo != null && !photo.isEmpty()) {
+                Path uploadPath = Paths.get(uploadDir);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectory(uploadPath);
+                }
+
+                String fileName = UUID.randomUUID().toString() + "_" + photo.getOriginalFilename();
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(photo.getInputStream(), filePath);
+
+                room.setRoomPhotoUrl("/api/files/" + fileName);
+            }
+
             Room savedRoom = roomRepository.save(room);
             RoomDTO roomDTO = Utils.mapRoomEntityToRoomDTO(savedRoom);
             response.setStatusCode(200);
@@ -98,6 +121,20 @@ public class RoomService implements IRoomService {
             if (roomType != null) room.setRoomType(roomType);
             if (roomPrice != null) room.setRoomPrice(roomPrice);
             if (description != null) room.setRoomDescription(description);
+
+            if (photo != null && !photo.isEmpty()) {
+                Path uploadPath = Paths.get(uploadDir);
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                String fileName = UUID.randomUUID().toString() + "_" + photo.getOriginalFilename();
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(photo.getInputStream(), filePath);
+
+                imageUrl = "/api/files/" + fileName;
+            }
+
             if (imageUrl != null) room.setRoomPhotoUrl(imageUrl);
 
             Room updatedRoom = roomRepository.save(room);
